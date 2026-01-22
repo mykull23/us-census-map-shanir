@@ -1,11 +1,8 @@
 name: Deploy to GitHub Pages
 
 on:
-  # Trigger on push to main branch
   push:
     branches: [ "main" ]
-  
-  # Allow manual triggers
   workflow_dispatch:
 
 # Set permissions for GitHub Pages
@@ -20,31 +17,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
+  build:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          # Fetch all history for proper git info
-          fetch-depth: 0
 
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
 
       - name: Create secure config file
         run: |
-          # Create config.js with API key from secrets
-          echo "Creating secure configuration file..."
+          echo "🛠️ Creating secure configuration file..."
+          
+          # Remove any existing config files to avoid confusion
+          rm -f js/config.js js/config-public.js
+          
+          # Create the secure config with API key from secrets
           cat > js/config.js << 'EOF'
           // ============================================
           // AUTO-GENERATED CONFIG FOR GITHUB PAGES
-          // DO NOT MODIFY - Generated during deployment
+          // Generated during deployment - DO NOT MODIFY
           // ============================================
           
           // Environment detection
@@ -54,7 +48,7 @@ jobs:
           
           // Configuration object
           const CONFIG = {
-              // Google Maps API Key (from GitHub Secrets)
+              // Google Maps API Key (injected from GitHub Secrets)
               GOOGLE_MAPS_API_KEY: '${{ secrets.GOOGLE_MAPS_API_KEY }}',
               
               // Environment info
@@ -72,18 +66,21 @@ jobs:
               PIN_THRESHOLD: 1000,
               DEBUG_MODE: IS_GITHUB ? false : true,
               
-              // Build info
-              BUILD_TIMESTAMP: '${{ github.run_id }}',
-              BUILD_DATE: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
+              // Build info (for debugging)
+              BUILD_ID: '${{ github.run_id }}',
+              BUILD_NUMBER: '${{ github.run_number }}',
+              BUILD_DATE: new Date().toISOString().split('T')[0]
           };
           
-          // Logging (only in development)
+          // Safe logging (no key exposure)
           if (CONFIG.DEBUG_MODE) {
-              console.log('🔧 Configuration loaded:', {
+              console.log('🔧 Census Map Configuration:', {
                   environment: CONFIG.ENVIRONMENT,
-                  build: CONFIG.BUILD_TIMESTAMP,
-                  isLocal: CONFIG.IS_LOCAL,
-                  isGitHub: CONFIG.IS_GITHUB
+                  buildId: CONFIG.BUILD_ID,
+                  hasApiKey: !!CONFIG.GOOGLE_MAPS_API_KEY,
+                  keyPreview: CONFIG.GOOGLE_MAPS_API_KEY ? 
+                    CONFIG.GOOGLE_MAPS_API_KEY.substring(0, 6) + '...' + 
+                    CONFIG.GOOGLE_MAPS_API_KEY.substring(CONFIG.GOOGLE_MAPS_API_KEY.length - 4) : 'MISSING'
               });
           }
           
@@ -91,28 +88,35 @@ jobs:
           window.CONFIG = CONFIG;
           EOF
           
-          # Verify the file was created
-          echo "Config file created. First few lines:"
-          head -10 js/config.js
-          
-          # Remove any existing config-public.js to avoid confusion
-          rm -f js/config-public.js js/config.example.js
+          echo "✅ Config file created"
+          echo "📁 File size:" $(wc -l < js/config.js) "lines"
+          echo "🔍 First 3 lines:"
+          head -3 js/config.js
 
-      - name: Validate configuration
+      - name: Verify file structure
         run: |
-          echo "Validating generated config..."
-          if grep -q '\${{ secrets.GOOGLE_MAPS_API_KEY }}' js/config.js; then
-            echo "✅ Config template ready for secret injection"
-          else
-            echo "❌ Config template not properly generated"
-            exit 1
-          fi
+          echo "📂 Verifying project structure..."
+          ls -la
+          echo "---"
+          ls -la js/ || echo "js directory not found"
+          echo "---"
+          echo "📄 Checking index.html references..."
+          grep -n "config.js" index.html || echo "config.js not referenced in index.html"
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
