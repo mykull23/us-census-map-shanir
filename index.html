@@ -15,26 +15,43 @@
     <!-- Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
     
-    <!-- Configuration (MUST BE FIRST) -->
-    <script src="js/config.js"></script>
+    <!-- Configuration -->
+    <script src="config.js"></script>
     
     <!-- Dynamically load Google Maps with API key -->
     <script>
-        // Check if API key is configured
-        if (!window.CONFIG || !window.CONFIG.GOOGLE_MAPS_API_KEY || 
-            window.CONFIG.GOOGLE_MAPS_API_KEY.includes('YOUR_')) {
+        // Load Google Maps after config is loaded
+        function loadGoogleMaps() {
+            if (!window.CONFIG || !window.CONFIG.GOOGLE_MAPS_API_KEY) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const errorDiv = document.getElementById('error-container');
+                    if (errorDiv) {
+                        errorDiv.innerHTML = `
+                            <div class="error-message">
+                                <h3>⚠️ Configuration Error</h3>
+                                <p>Please configure your Google Maps API key in config.js</p>
+                                <p>Make sure the key is restricted to your domain.</p>
+                            </div>
+                        `;
+                        errorDiv.style.display = 'block';
+                    }
+                });
+                return;
+            }
             
-            document.addEventListener('DOMContentLoaded', function() {
-                alert('⚠️ Please configure your Google Maps API key in js/config.js');
-                console.error('Google Maps API key not configured properly');
-            });
-        } else {
             // Load Google Maps with configured key
             const googleMapsScript = document.createElement('script');
             googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&callback=initApp&loading=async&libraries=marker`;
             googleMapsScript.async = true;
             googleMapsScript.defer = true;
             document.head.appendChild(googleMapsScript);
+        }
+        
+        // Start loading after config
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadGoogleMaps);
+        } else {
+            loadGoogleMaps();
         }
     </script>
     
@@ -79,8 +96,8 @@
                 <h3>📊 Data Sources</h3>
                 <p><strong>US Census ACS 2022</strong> 5-Year Estimates</p>
                 <ul class="data-sources">
-                    <li>🎓 <strong>Education:</strong> Table B15003 (Fields 022-025)</li>
-                    <li>💰 <strong>Income:</strong> Table B19001 (Fields 016-017)</li>
+                    <li>🎓 <strong>Education:</strong> Bachelor's degree or higher</li>
+                    <li>💰 <strong>Income:</strong> Households ≥ $100k/year</li>
                 </ul>
                 <p class="disclaimer">Each pin ≈ 1,000 residents/households</p>
             </div>
@@ -89,7 +106,6 @@
             <div class="control-card">
                 <h3>🎛️ Map Layers</h3>
                 
-                <!-- Education Layer -->
                 <div class="layer-control">
                     <label class="layer-toggle">
                         <input type="checkbox" id="toggle-education" checked>
@@ -103,7 +119,6 @@
                     <div class="layer-stats" id="stats-education">Loading...</div>
                 </div>
 
-                <!-- Income Layer -->
                 <div class="layer-control">
                     <label class="layer-toggle">
                         <input type="checkbox" id="toggle-income" checked>
@@ -145,9 +160,6 @@
                     <button id="clear-markers" class="btn-secondary">
                         <span>×</span> Clear Markers
                     </button>
-                    <button id="refresh-data" class="btn-secondary">
-                        <span>↻</span> Refresh Data
-                    </button>
                 </div>
                 <div class="zoom-info">
                     <label>Current Zoom: <span id="zoom-level">4</span></label>
@@ -185,13 +197,13 @@
             <div class="help-card">
                 <h3>❓ How to Use</h3>
                 <ol class="help-steps">
-                    <li>Toggle layers using the switches above</li>
+                    <li>Toggle layers using the switches</li>
                     <li>Click on pins to see detailed data</li>
                     <li>Zoom in to separate clustered markers</li>
                     <li>Use slider to control zoom level</li>
                 </ol>
                 <p class="source-note">
-                    <strong>Source:</strong> US Census Bureau ACS 2022 5-Year Estimates
+                    <strong>Source:</strong> US Census Bureau ACS 2022
                 </p>
             </div>
         </aside>
@@ -224,24 +236,19 @@
                 Not an official government product
             </p>
             <p class="footer-links">
-                <a href="#" id="privacy-link">Privacy</a> | 
-                <a href="#" id="data-link">Data Sources</a> | 
-                <a href="#" id="github-link">GitHub</a> | 
-                <a href="#" id="issue-link">Report Issue</a>
+                <a href="https://www.census.gov/data/developers/data-sets/acs-5year.html" target="_blank">Data Source</a> | 
+                <a href="https://github.com" target="_blank">GitHub</a>
             </p>
         </div>
     </footer>
 
     <!-- JavaScript Files -->
-    <script src="js/census-fetcher.js"></script>
     <script src="js/app.js"></script>
     
     <!-- Initialize application -->
     <script>
-        // Global application instance
         window.app = null;
         
-        // Initialize when Google Maps is ready
         window.initApp = function() {
             console.log('Google Maps loaded, initializing application...');
             window.app = new CensusMapApp();
@@ -251,25 +258,24 @@
         // Fallback if Google Maps fails to load
         setTimeout(function() {
             if (!window.google || !window.google.maps) {
+                const loadingOverlay = document.getElementById('loading-overlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+                
                 const errorDiv = document.getElementById('error-container');
                 if (errorDiv) {
                     errorDiv.innerHTML = `
                         <div class="error-message">
                             <h3>❌ Failed to load Google Maps</h3>
-                            <p>Please check your API key configuration in js/config.js</p>
-                            <p>Make sure the key is restricted to: <code>https://*.github.io/*</code></p>
-                            <button onclick="location.reload()">Retry</button>
+                            <p>Please check your API key configuration in config.js</p>
+                            <p>Make sure the key is valid and has the Maps JavaScript API enabled.</p>
                         </div>
                     `;
                     errorDiv.style.display = 'block';
                 }
-                
-                // Hide loading overlay
-                const loadingOverlay = document.getElementById('loading-overlay');
-                if (loadingOverlay) {
-                    loadingOverlay.style.display = 'none';
-                }
             }
-        }, 10000); // 10 second timeout
+        }, 15000); // 15 second timeout
     </script>
+</body>
 </html>
