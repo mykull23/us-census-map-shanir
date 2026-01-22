@@ -1,5 +1,5 @@
 /**
- * Main Application Controller - Optimized Version
+ * Main Application Controller - Simplified Version
  */
 class CensusMapApp {
     constructor() {
@@ -10,6 +10,7 @@ class CensusMapApp {
         this.layerVisibility = { education: true, income: true };
         this.uiElements = {};
         this.currentInfoWindow = null;
+        this.PIN_THRESHOLD = 1000; // Each pin represents this many people/households
     }
 
     async initialize() {
@@ -112,17 +113,18 @@ class CensusMapApp {
         try {
             this.updateLoadingStatus('Loading data...', 30);
             
-            // Load ZIP centroids
-            const zipResponse = await fetch(CONFIG.DATA_FILES.ZIP_CODES);
-            const zipCentroids = await zipResponse.json();
+            // Load all data files directly
+            const [zipResponse, eduResponse, incResponse] = await Promise.all([
+                fetch('data/zip-centroids.json'),
+                fetch('data/education-data.json'),
+                fetch('data/income-data.json')
+            ]);
             
-            // Load education data
-            const eduResponse = await fetch(CONFIG.DATA_FILES.EDUCATION);
-            const educationData = await eduResponse.json();
-            
-            // Load income data
-            const incResponse = await fetch(CONFIG.DATA_FILES.INCOME);
-            const incomeData = await incResponse.json();
+            const [zipCentroids, educationData, incomeData] = await Promise.all([
+                zipResponse.json(),
+                eduResponse.json(),
+                incResponse.json()
+            ]);
             
             this.updateLoadingStatus('Creating markers...', 70);
             
@@ -208,7 +210,7 @@ class CensusMapApp {
 
     createMarkersForData(centroid, count, type, color, zip, rawData) {
         const markers = [];
-        const pinsCount = Math.max(1, Math.round(count / CONFIG.PIN_THRESHOLD));
+        const pinsCount = Math.max(1, Math.round(count / this.PIN_THRESHOLD));
         
         for (let i = 0; i < pinsCount; i++) {
             const offset = {
@@ -255,7 +257,7 @@ class CensusMapApp {
             <div class="info-window">
                 <h3>ZIP Code: ${zip}</h3>
                 <p><strong>${type === 'education' ? 'College Graduates' : 'High-Income Households'}:</strong> ${count.toLocaleString()}</p>
-                <p>Map pins: ${Math.round(count / CONFIG.PIN_THRESHOLD)} (≈${CONFIG.PIN_THRESHOLD.toLocaleString()} each)</p>
+                <p>Map pins: ${Math.round(count / this.PIN_THRESHOLD)} (≈${this.PIN_THRESHOLD.toLocaleString()} each)</p>
                 <hr>
                 <p><small>Source: US Census ACS 2022</small></p>
             </div>
@@ -445,6 +447,3 @@ class CensusMapApp {
         }
     }
 }
-
-// Remove census-fetcher.js since we're loading static files directly
-// window.CensusMapApp = CensusMapApp;

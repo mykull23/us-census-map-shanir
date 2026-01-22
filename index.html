@@ -15,44 +15,27 @@
     <!-- Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
     
-    <!-- Configuration -->
-    <script src="config.js"></script>
-    
-    <!-- Dynamically load Google Maps with API key -->
+    <!-- Google Maps API with inline API key -->
     <script>
-        // Load Google Maps after config is loaded
-        function loadGoogleMaps() {
-            if (!window.CONFIG || !window.CONFIG.GOOGLE_MAPS_API_KEY) {
-                document.addEventListener('DOMContentLoaded', function() {
-                    const errorDiv = document.getElementById('error-container');
-                    if (errorDiv) {
-                        errorDiv.innerHTML = `
-                            <div class="error-message">
-                                <h3>⚠️ Configuration Error</h3>
-                                <p>Please configure your Google Maps API key in config.js</p>
-                                <p>Make sure the key is restricted to your domain.</p>
-                            </div>
-                        `;
-                        errorDiv.style.display = 'block';
-                    }
-                });
-                return;
-            }
-            
-            // Load Google Maps with configured key
-            const googleMapsScript = document.createElement('script');
-            googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&callback=initApp&loading=async&libraries=marker`;
-            googleMapsScript.async = true;
-            googleMapsScript.defer = true;
-            document.head.appendChild(googleMapsScript);
-        }
+        // Your Google Maps API key - just put it here
+        const GOOGLE_MAPS_API_KEY = 'AIzaSyBbmfv2pJfcg2RnHHeETHCY3oolcsx5LVk';
         
-        // Start loading after config
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadGoogleMaps);
-        } else {
-            loadGoogleMaps();
-        }
+        // Load Google Maps
+        const googleMapsScript = document.createElement('script');
+        googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initApp&loading=async&libraries=marker`;
+        googleMapsScript.async = true;
+        googleMapsScript.defer = true;
+        document.head.appendChild(googleMapsScript);
+        
+        // Simple config for the rest of the app
+        window.CONFIG = {
+            DATA_FILES: {
+                EDUCATION: 'data/education-data.json',
+                INCOME: 'data/income-data.json',
+                ZIP_CODES: 'data/zip-centroids.json'
+            },
+            PIN_THRESHOLD: 1000
+        };
     </script>
     
     <!-- MarkerClusterer Library -->
@@ -268,7 +251,7 @@
                     errorDiv.innerHTML = `
                         <div class="error-message">
                             <h3>❌ Failed to load Google Maps</h3>
-                            <p>Please check your API key configuration in config.js</p>
+                            <p>Please check your API key in index.html</p>
                             <p>Make sure the key is valid and has the Maps JavaScript API enabled.</p>
                         </div>
                     `;
