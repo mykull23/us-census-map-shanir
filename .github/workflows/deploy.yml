@@ -1,0 +1,118 @@
+name: Deploy to GitHub Pages
+
+on:
+  # Trigger on push to main branch
+  push:
+    branches: [ "main" ]
+  
+  # Allow manual triggers
+  workflow_dispatch:
+
+# Set permissions for GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for proper git info
+          fetch-depth: 0
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Create secure config file
+        run: |
+          # Create config.js with API key from secrets
+          echo "Creating secure configuration file..."
+          cat > js/config.js << 'EOF'
+          // ============================================
+          // AUTO-GENERATED CONFIG FOR GITHUB PAGES
+          // DO NOT MODIFY - Generated during deployment
+          // ============================================
+          
+          // Environment detection
+          const IS_LOCAL = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1';
+          const IS_GITHUB = window.location.hostname.includes('github.io');
+          
+          // Configuration object
+          const CONFIG = {
+              // Google Maps API Key (from GitHub Secrets)
+              GOOGLE_MAPS_API_KEY: '${{ secrets.GOOGLE_MAPS_API_KEY }}',
+              
+              // Environment info
+              ENVIRONMENT: IS_GITHUB ? 'production' : 'development',
+              IS_LOCAL: IS_LOCAL,
+              IS_GITHUB: IS_GITHUB,
+              
+              // Census API settings
+              CENSUS_API_BASE: 'https://api.census.gov/data',
+              CENSUS_YEAR: '2022',
+              CENSUS_SURVEY: 'acs/acs5',
+              
+              // Application settings
+              MAX_ZIP_CODES: 500,
+              PIN_THRESHOLD: 1000,
+              DEBUG_MODE: IS_GITHUB ? false : true,
+              
+              // Build info
+              BUILD_TIMESTAMP: '${{ github.run_id }}',
+              BUILD_DATE: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
+          };
+          
+          // Logging (only in development)
+          if (CONFIG.DEBUG_MODE) {
+              console.log('🔧 Configuration loaded:', {
+                  environment: CONFIG.ENVIRONMENT,
+                  build: CONFIG.BUILD_TIMESTAMP,
+                  isLocal: CONFIG.IS_LOCAL,
+                  isGitHub: CONFIG.IS_GITHUB
+              });
+          }
+          
+          // Make config globally available
+          window.CONFIG = CONFIG;
+          EOF
+          
+          # Verify the file was created
+          echo "Config file created. First few lines:"
+          head -10 js/config.js
+          
+          # Remove any existing config-public.js to avoid confusion
+          rm -f js/config-public.js js/config.example.js
+
+      - name: Validate configuration
+        run: |
+          echo "Validating generated config..."
+          if grep -q '\${{ secrets.GOOGLE_MAPS_API_KEY }}' js/config.js; then
+            echo "✅ Config template ready for secret injection"
+          else
+            echo "❌ Config template not properly generated"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
