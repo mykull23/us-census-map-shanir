@@ -1,0 +1,24 @@
+{
+    "10001": {
+        "name": "ZCTA 10001",
+        "values": [4500, 2200, 800, 400],
+        "total": 7900,
+        "breakdown": {
+            "bachelors": 4500,
+            "masters": 2200,
+            "professional": 800,
+            "doctorate": 400
+        }
+    },
+    "90210": {
+        "name": "ZCTA 90210",
+        "values": [3200, 1800, 900, 600],
+        "total": 6500,
+        "breakdown": {
+            "bachelors": 3200,
+            "masters": 1800,
+            "professional": 900,
+            "doctorate": 600
+        }
+    }
+}
