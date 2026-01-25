@@ -38,12 +38,13 @@ class ACSApplication {
     // INITIALIZATION
     // ============================================================================
 
-    async init() {
-        try {
-            this.showLoading('Initializing application...');
-            
-            // Initialize services in sequence
-            await this.initializeServices();
+   async init() {
+    try {
+        // Initialize services first
+        await this.initializeServices();
+        
+        // NOW show loading since notificationSystem exists
+        this.showLoading('Initializing application...');
             
             // Setup UI
             this.setupUI();
@@ -81,7 +82,7 @@ class ACSApplication {
         this.zipIndex = new ZIPCodeIndex();
         
         try {
-            await this.zipIndex.loadFromCSV('data/uszips.csv', {
+            await this.zipIndex.loadFromJSON('data/uszips.json', {
                 progressCallback: (progress) => {
                     if (progress.loaded % 50000 === 0) {
                         this.showInfo(`Loaded ${progress.loaded} ZIP codes...`);

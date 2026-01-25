@@ -29,100 +29,33 @@ class ZIPCodeIndex {
      * @param {Object} options - Loading options
      * @returns {Promise<boolean>}
      */
-    async loadFromCSV(csvUrl, options = {}) {
-        const startTime = performance.now();
+    // Update js/zipCodeIndex.js - replace loadFromCSV with:
+async loadFromJSON(jsonUrl) {
+    try {
+        const response = await fetch(jsonUrl);
+        const data = await response.json();
         
-        try {
-            console.log(`Loading ZIP code data from: ${csvUrl}`);
-            
-            const {
-                chunkSize = 50000,
-                progressCallback = null,
-                errorCallback = null
-            } = options;
-
-            const response = await fetch(csvUrl);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-            let lineCount = 0;
-            let isFirstChunk = true;
-            let headers = [];
-
-            const parseStartTime = performance.now();
-
-            while (true) {
-                const { done, value } = await reader.read();
-                buffer += decoder.decode(value, { stream: !done });
-                const lines = buffer.split('\n');
-                
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-
-                    if (isFirstChunk) {
-                        headers = this.parseCSVHeaders(line);
-                        isFirstChunk = false;
-                        continue;
-                    }
-
-                    try {
-                        const record = this.parseCSVRecord(line, headers);
-                        if (record && record.zip) {
-                            this.indexRecord(record);
-                            lineCount++;
-
-                            if (progressCallback && lineCount % 10000 === 0) {
-                                progressCallback({
-                                    loaded: lineCount,
-                                    current: record
-                                });
-                            }
-
-                            // Yield to main thread for large files
-                            if (lineCount % chunkSize === 0) {
-                                await new Promise(resolve => setTimeout(resolve, 0));
-                            }
-                        }
-                    } catch (error) {
-                        if (errorCallback) {
-                            errorCallback(error, line);
-                        } else {
-                            console.warn(`Failed to parse line ${lineCount}: ${error.message}`);
-                        }
-                    }
-                }
-
-                if (done) break;
-            }
-
-            this.metrics.parseTime = performance.now() - parseStartTime;
-            
-            // Build spatial index
-            const indexStartTime = performance.now();
-            this.buildSpatialIndex();
-            this.metrics.indexTime = performance.now() - indexStartTime;
-
-            this.loaded = true;
-            this.totalRecords = lineCount;
-            this.metrics.loadTime = performance.now() - startTime;
-
-            console.log(`Successfully loaded ${lineCount} ZIP codes in ${this.metrics.loadTime.toFixed(0)}ms`);
-            console.log(`Parse: ${this.metrics.parseTime.toFixed(0)}ms, Index: ${this.metrics.indexTime.toFixed(0)}ms`);
-
-            return true;
-
-        } catch (error) {
-            console.error('Failed to load ZIP code data:', error);
-            throw error;
+        // If it's an array
+        if (Array.isArray(data)) {
+            data.forEach(record => this.indexRecord(record));
+        } 
+        // If it's an index object {zip: data}
+        else {
+            Object.values(data).forEach(record => this.indexRecord(record));
         }
+        
+        this.loaded = true;
+        this.totalRecords = this.zips.size;
+        this.buildSpatialIndex();
+        
+        console.log(`Loaded ${this.totalRecords} ZIP codes from JSON`);
+        return true;
+        
+    } catch (error) {
+        console.error('Failed to load JSON:', error);
+        throw error;
     }
+}
 
     /**
      * Parse CSV headers
