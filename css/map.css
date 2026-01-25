@@ -1,0 +1,213 @@
+/* Map Controls */
+.map-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 1000;
+}
+
+.map-control-btn {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+.map-control-btn:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+}
+
+/* Results Panel */
+.results-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    max-width: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.results-panel h4 {
+    margin-bottom: 0.75rem;
+    color: var(--dark-color);
+}
+
+.results-panel table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.results-panel th {
+    text-align: left;
+    padding: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    color: #666;
+    font-weight: 600;
+}
+
+.results-panel td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.results-panel tr:hover {
+    background: #f8f9fa;
+}
+
+/* Custom Popup */
+.acs-popup .leaflet-popup-content-wrapper {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.acs-popup .leaflet-popup-content {
+    margin: 0;
+    width: 300px !important;
+}
+
+.acs-popup-content {
+    padding: 1rem;
+}
+
+.acs-popup-content h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--dark-color);
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.popup-section {
+    margin: 0.75rem 0;
+}
+
+.popup-section h5 {
+    margin: 0 0 0.25rem 0;
+    color: #666;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.data-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0.25rem 0;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.popup-btn {
+    flex: 1;
+    padding: 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.popup-btn:hover {
+    background: #1976D2;
+}
+
+/* Legend */
+.acs-legend {
+    background: white !important;
+    padding: 1rem !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow) !important;
+    font-family: inherit !important;
+}
+
+.acs-legend h4 {
+    margin: 0 0 0.75rem 0 !important;
+    font-size: 0.9rem !important;
+    color: var(--dark-color) !important;
+    font-weight: 600 !important;
+}
+
+.legend-scale {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-item i {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+}
+
+.legend-stats {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.legend-stats p {
+    margin: 0.25rem 0;
+}
+
+/* Custom Marker Styles */
+.acs-marker {
+    animation: markerAppear 0.3s ease-out;
+}
+
+@keyframes markerAppear {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Cluster Styles */
+.marker-cluster {
+    background-color: rgba(33, 150, 243, 0.6);
+    color: white;
+    font-weight: bold;
+}
+
+.marker-cluster div {
+    background-color: rgba(25, 118, 210, 0.8);
+}

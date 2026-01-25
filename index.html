@@ -3,262 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>US Census ACS Data Explorer | Interactive Map</title>
-    <meta name="description" content="Interactive map showing US Census data on education and income by ZIP code">
+    <title>ACS Data Visualization</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     
-    <!-- CSS -->
+    <!-- D3.js for color scales -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    
+    <!-- Our CSS -->
     <link rel="stylesheet" href="css/styles.css">
-    
-    <!-- Fonts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
-    
-    <!-- Google Maps API with inline API key -->
-    <script>
-        // Your Google Maps API key - just put it here
-        const GOOGLE_MAPS_API_KEY = 'AIzaSyBbmfv2pJfcg2RnHHeETHCY3oolcsx5LVk';
-        
-        // Load Google Maps
-        const googleMapsScript = document.createElement('script');
-        googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initApp&loading=async&libraries=marker`;
-        googleMapsScript.async = true;
-        googleMapsScript.defer = true;
-        document.head.appendChild(googleMapsScript);
-        
-        // Simple config for the rest of the app
-        window.CONFIG = {
-            DATA_FILES: {
-                EDUCATION: 'data/education-data.json',
-                INCOME: 'data/income-data.json',
-                ZIP_CODES: 'data/zip-centroids.json'
-            },
-            PIN_THRESHOLD: 1000
-        };
-    </script>
-    
-    <!-- MarkerClusterer Library -->
-    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+    <link rel="stylesheet" href="css/map.css">
+    <link rel="stylesheet" href="css/notifications.css">
 </head>
 <body>
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <h3>Loading Census Data Map</h3>
-            <p id="loading-text">Initializing application...</p>
-            <div class="progress-container">
-                <div id="loading-progress" class="progress-bar"></div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>📊 ACS Data Visualization</h1>
+            <div class="header-controls">
+                <div class="api-status">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="apiStatusText">Loading...</span>
+                </div>
+                <button id="clearCacheBtn" class="btn btn-secondary">Clear Cache</button>
             </div>
-        </div>
-    </div>
+        </header>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <h1>🇺🇸 US Census ACS Data Explorer</h1>
-            <p class="subtitle">Interactive visualization of education and income data by ZIP Code</p>
-        </div>
-        <div class="header-actions">
-            <button id="fullscreen-btn" class="btn-icon" title="Fullscreen">
-                <span>⛶</span>
-            </button>
-            <button id="help-btn" class="btn-icon" title="Help">
-                <span>?</span>
-            </button>
-        </div>
-    </header>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="control-panel">
+                    <h3>🔍 Search Controls</h3>
+                    
+                    <div class="form-group">
+                        <label for="searchType">Search Type</label>
+                        <select id="searchType" class="form-control">
+                            <option value="zip">ZIP Code</option>
+                            <option value="radius">Radius Search</option>
+                            <option value="state">State</option>
+                            <option value="city">City</option>
+                        </select>
+                    </div>
 
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <!-- Data Source Info -->
-            <div class="info-card">
-                <h3>📊 Data Sources</h3>
-                <p><strong>US Census ACS 2022</strong> 5-Year Estimates</p>
-                <ul class="data-sources">
-                    <li>🎓 <strong>Education:</strong> Bachelor's degree or higher</li>
-                    <li>💰 <strong>Income:</strong> Households ≥ $100k/year</li>
-                </ul>
-                <p class="disclaimer">Each pin ≈ 1,000 residents/households</p>
-            </div>
+                    <div class="form-group">
+                        <label for="searchInput">Enter Search</label>
+                        <div class="input-group">
+                            <input type="text" id="searchInput" class="form-control" placeholder="e.g., 10001 or New York">
+                            <button id="searchBtn" class="btn btn-primary">Search</button>
+                        </div>
+                    </div>
 
-            <!-- Layer Controls -->
-            <div class="control-card">
-                <h3>🎛️ Map Layers</h3>
+                    <div class="form-group radius-controls" id="radiusControls" style="display: none;">
+                        <label for="radiusInput">Radius (miles)</label>
+                        <input type="range" id="radiusInput" min="1" max="100" value="10" class="form-control">
+                        <span id="radiusValue">10 miles</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="variableSelect">ACS Variable</label>
+                        <select id="variableSelect" class="form-control">
+                            <option value="B01003_001E">Total Population</option>
+                            <option value="B19013_001E">Median Household Income</option>
+                            <option value="B25077_001E">Median Home Value</option>
+                            <option value="B25001_001E">Housing Units</option>
+                            <option value="B08301_001E">Means of Transportation</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="resultsLimit">Max Results</label>
+                        <input type="number" id="resultsLimit" min="1" max="1000" value="100" class="form-control">
+                    </div>
+
+                    <div class="button-group">
+                        <button id="exportDataBtn" class="btn btn-secondary">Export Data</button>
+                        <button id="clearMapBtn" class="btn btn-danger">Clear Map</button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>📈 Statistics</h3>
+                    <div id="statsContent">
+                        <div class="stat-item">
+                            <span class="stat-label">ZIP Codes Loaded:</span>
+                            <span id="zipCount" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">API Requests:</span>
+                            <span id="apiRequests" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Cache Hits:</span>
+                            <span id="cacheHits" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Data Points:</span>
+                            <span id="dataPoints" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Map Area -->
+            <main class="map-area">
+                <div id="mapContainer" class="map-container"></div>
                 
-                <div class="layer-control">
-                    <label class="layer-toggle">
-                        <input type="checkbox" id="toggle-education" checked>
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">
-                            <span class="icon">🎓</span>
-                            Education Layer
-                        </span>
-                    </label>
-                    <p class="layer-description">Residents age 25+ with Bachelor's degree or higher</p>
-                    <div class="layer-stats" id="stats-education">Loading...</div>
-                </div>
-
-                <div class="layer-control">
-                    <label class="layer-toggle">
-                        <input type="checkbox" id="toggle-income" checked>
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">
-                            <span class="icon">💰</span>
-                            Income Layer
-                        </span>
-                    </label>
-                    <p class="layer-description">Households with income ≥ $100,000/year</p>
-                    <div class="layer-stats" id="stats-income">Loading...</div>
-                </div>
-
-                <!-- Legend -->
-                <div class="legend">
-                    <h4>Map Legend</h4>
-                    <div class="legend-item">
-                        <span class="legend-color" style="background-color: #1a73e8;"></span>
-                        <span>Education (Bachelor's+)</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-color" style="background-color: #34a853;"></span>
-                        <span>Income (≥ $100k)</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-cluster">⏺⏺⏺</span>
-                        <span>Marker Cluster</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Map Controls -->
-            <div class="control-card">
-                <h3>🗺️ Map Controls</h3>
-                <div class="button-group">
-                    <button id="reset-view" class="btn-secondary">
-                        <span>↺</span> Reset View
-                    </button>
-                    <button id="clear-markers" class="btn-secondary">
-                        <span>×</span> Clear Markers
-                    </button>
-                </div>
-                <div class="zoom-info">
-                    <label>Current Zoom: <span id="zoom-level">4</span></label>
-                    <input type="range" id="zoom-slider" min="1" max="18" value="4">
-                </div>
-            </div>
-
-            <!-- Data Summary -->
-            <div class="stats-card">
-                <h3>📈 Data Summary</h3>
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <div class="summary-value" id="total-zips">0</div>
-                        <div class="summary-label">ZIP Codes</div>
-                    </div>
-                    <div class="summary-item">
-                        <div class="summary-value" id="total-pins">0</div>
-                        <div class="summary-label">Total Pins</div>
-                    </div>
-                    <div class="summary-item">
-                        <div class="summary-value" id="education-total">0</div>
-                        <div class="summary-label">Educated Residents</div>
-                    </div>
-                    <div class="summary-item">
-                        <div class="summary-value" id="income-total">0</div>
-                        <div class="summary-label">High-Income Households</div>
-                    </div>
-                </div>
-                <div class="timestamp" id="data-timestamp">
-                    Last updated: <span id="update-time">Never</span>
-                </div>
-            </div>
-
-            <!-- Help Section -->
-            <div class="help-card">
-                <h3>❓ How to Use</h3>
-                <ol class="help-steps">
-                    <li>Toggle layers using the switches</li>
-                    <li>Click on pins to see detailed data</li>
-                    <li>Zoom in to separate clustered markers</li>
-                    <li>Use slider to control zoom level</li>
-                </ol>
-                <p class="source-note">
-                    <strong>Source:</strong> US Census Bureau ACS 2022
-                </p>
-            </div>
-        </aside>
-
-        <!-- Main Map Area -->
-        <main class="main-content">
-            <div class="map-container">
-                <div id="map"></div>
+                <!-- Map Controls -->
                 <div class="map-controls">
-                    <button id="zoom-in" class="map-btn">+</button>
-                    <button id="zoom-out" class="map-btn">-</button>
+                    <button id="zoomInBtn" class="map-control-btn">+</button>
+                    <button id="zoomOutBtn" class="map-control-btn">-</button>
+                    <button id="fitBoundsBtn" class="map-control-btn">📍</button>
                 </div>
-                <div class="map-coordinates">
-                    Lat: <span id="lat-coord">0.0000</span>, 
-                    Lng: <span id="lng-coord">0.0000</span>
-                </div>
-            </div>
-            
-            <!-- Error Display -->
-            <div id="error-container" class="error-container" style="display: none;"></div>
-        </main>
-    </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <p>
-                <strong>US Census ACS Data Explorer</strong> | 
-                Created with data from the US Census Bureau | 
-                Not an official government product
-            </p>
-            <p class="footer-links">
-                <a href="https://www.census.gov/data/developers/data-sets/acs-5year.html" target="_blank">Data Source</a> | 
-                <a href="https://github.com" target="_blank">GitHub</a>
-            </p>
+                <!-- Results Info -->
+                <div id="resultsPanel" class="results-panel">
+                    <h4>Results</h4>
+                    <div id="resultsContent"></div>
+                </div>
+            </main>
         </div>
-    </footer>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-info">
+                <span>ACS Data Source: U.S. Census Bureau</span>
+                <span>Cache: <span id="cacheStatus">Not loaded</span></span>
+                <span>Last Updated: <span id="lastUpdated">-</span></span>
+            </div>
+        </footer>
+    </div>
 
     <!-- JavaScript Files -->
-    <script src="js/app.js"></script>
-    
-    <!-- Initialize application -->
-    <script>
-        window.app = null;
-        
-        window.initApp = function() {
-            console.log('Google Maps loaded, initializing application...');
-            window.app = new CensusMapApp();
-            window.app.initialize();
-        };
-        
-        // Fallback if Google Maps fails to load
-        setTimeout(function() {
-            if (!window.google || !window.google.maps) {
-                const loadingOverlay = document.getElementById('loading-overlay');
-                if (loadingOverlay) {
-                    loadingOverlay.style.display = 'none';
-                }
-                
-                const errorDiv = document.getElementById('error-container');
-                if (errorDiv) {
-                    errorDiv.innerHTML = `
-                        <div class="error-message">
-                            <h3>❌ Failed to load Google Maps</h3>
-                            <p>Please check your API key in index.html</p>
-                            <p>Make sure the key is valid and has the Maps JavaScript API enabled.</p>
-                        </div>
-                    `;
-                    errorDiv.style.display = 'block';
-                }
-            }
-        }, 15000); // 15 second timeout
-    </script>
+    <script src="js/zipCodeIndex.js"></script>
+    <script src="js/acsApiService.js"></script>
+    <script src="js/mapVisualizer.js"></script>
+    <script src="js/notificationSystem.js"></script>
+    <script src="js/application.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
