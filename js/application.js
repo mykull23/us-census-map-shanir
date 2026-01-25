@@ -40,33 +40,41 @@ class ACSApplication {
 
    async init() {
     try {
-        // Initialize services first
+        // Don't call showLoading here - notificationSystem doesn't exist yet!
+        console.log('Starting initialization...');
+        
+        // Initialize services FIRST
         await this.initializeServices();
         
-        // NOW show loading since notificationSystem exists
+        // NOW we can show notifications
         this.showLoading('Initializing application...');
-            
-            // Setup UI
-            this.setupUI();
-            
-            // Setup event listeners
-            this.setupEventListeners();
-            
-            // Load initial data
-            await this.loadInitialData();
-            
-            this.isInitialized = true;
-            this.stats.initializationTime = Date.now() - this.stats.startTime;
-            
-            this.showSuccess('Application initialized successfully');
-            console.log('ACS Application initialized in', this.stats.initializationTime, 'ms');
-            
-        } catch (error) {
-            console.error('Failed to initialize application:', error);
+        
+        // Setup UI
+        this.setupUI();
+        
+        // Setup event listeners
+        this.setupEventListeners();
+        
+        // Load initial data
+        await this.loadInitialData();
+        
+        this.isInitialized = true;
+        this.stats.initializationTime = Date.now() - this.stats.startTime;
+        
+        this.showSuccess('Application initialized successfully');
+        console.log('ACS Application initialized in', this.stats.initializationTime, 'ms');
+        
+    } catch (error) {
+        console.error('Failed to initialize application:', error);
+        // Use alert since notificationSystem might not exist
+        if (this.notificationSystem) {
             this.showError(`Initialization failed: ${error.message}`);
-            throw error;
+        } else {
+            alert(`Initialization failed: ${error.message}`);
         }
+        throw error;
     }
+}
 
     async initializeServices() {
         // 1. Initialize notification system
